@@ -72,7 +72,6 @@ class MessagesTableViewController: UITableViewController, NFCTagReaderSessionDel
     }
 
     func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
-        //print("ISO7816 session detected tags: \(tags.count)")
         print("TAG detected: \(tags.count)")
         if tags.count > 1 {
             session.alertMessage = "More than 1 tag is detected, please remove all tags and try again."
@@ -80,7 +79,49 @@ class MessagesTableViewController: UITableViewController, NFCTagReaderSessionDel
         }
 
         guard let firstTag = tags.first else { return }
+        guard case .iso7816(let iso7816Tag) = firstTag else { return }
         
+        print("================== READ TAG ==================\n")
+        
+        let aid = iso7816Tag.initialSelectedAID
+        print("TAG AID: \(aid)")
+        let dataTag = iso7816Tag.applicationData
+        print("Tag Data: \(String(describing: dataTag))")
+        
+        let historyByte = iso7816Tag.historicalBytes
+        let historyByteHex = historyByte?.map { String(format: "0x%02hhx", $0) }.joined(separator: " ") ?? "N/A"
+        print("TAG History: \(historyByteHex)")
+        
+        let priopeirtyCoding = iso7816Tag.proprietaryApplicationDataCoding
+        print("TAG PC: \(priopeirtyCoding)")
+        
+        let identifier = iso7816Tag.identifier
+        print("TAG ID: \(identifier)")
+        
+        let serialNumberAsData = Data(identifier.map { UInt8($0) })
+        let serialNumberAsString = serialNumberAsData.map { String(format: "%02hhx", $0) }.joined()
+        print("TAG SN: \(serialNumberAsString)")
+        
+        print("================== EXCUSE ME ==================\n")
+        session.invalidate()
+        
+        // lempar ke viewcontroller
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            let tagDetailsVC = TagDetailsViewController()
+            tagDetailsVC.tagAID = aid
+            tagDetailsVC.tagData = dataTag
+            tagDetailsVC.tagHistory = historyByteHex
+            tagDetailsVC.tagPC = priopeirtyCoding
+            tagDetailsVC.tagID = identifier
+            tagDetailsVC.tagSN = serialNumberAsString
+            
+            let navigationController = UINavigationController(rootViewController: tagDetailsVC)
+            self.present(navigationController, animated: true)
+        }
+        
+        /*
         session.connect(to: firstTag) { error in
             if let error = error {
                 print("Connection error: \(error.localizedDescription)")
@@ -97,9 +138,15 @@ class MessagesTableViewController: UITableViewController, NFCTagReaderSessionDel
                 return
             }
 
+            print(firstTag.isAvailable.description)
+            print(firstTag)
+            print(session.description)
+            
+            print("connected \(session.connectedTag)")
             // Try each AID
             self.tryNextAID(iso7816Tag: iso7816Tag, session: session, aidIndex: 0)
         }
+        */
     }
 
     // MARK: - Helper Methods
@@ -131,14 +178,21 @@ class MessagesTableViewController: UITableViewController, NFCTagReaderSessionDel
             p1Parameter: 0x04,
             p2Parameter: 0x00,
             data: aidData,
-            expectedResponseLength: 1
+            expectedResponseLength: -1
         )
         print("selected comment \(selectCommand)")
          
         //print("Sending SELECT APDU command for AID: \(currentAID)")
         
         //iso send command
+        
         iso7816Tag.sendCommand(apdu: selectCommand) { responseData, sw1, sw2, error in
+            
+            print("response \(responseData)" )
+            print("sw1 \(sw1)" )
+            print("sw2 \(sw2)" )
+            print("error \(error.debugDescription)" )
+            
             if let error = error {
                 print("Error sending command: \(error.localizedDescription)")
                 // Try next AID
