@@ -1,3 +1,17 @@
+# coreNFC UIKit
+Belajar coreNFC cuyy, rungsing juga.
+
+Issues
+- Send Command : need read and learn about NFCISO7816APDU
+- APDU Request Response : need more read sw1 sw2 -> info error desc
+- Communicating with CARD or TAGS ????
+- Get More AID
+
+
+Original PROJECT and README by Apple
+
+
+
 # Building an NFC Tag-Reader App
 
 Read NFC tags with NDEF messages in your app.
